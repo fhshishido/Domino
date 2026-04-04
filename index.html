@@ -789,6 +789,35 @@ function add(time, valor) {
 
 atualizar();
 
+// Service Worker para funcionar offline
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'domino-v1';
+    self.addEventListener('install', e => {
+      e.waitUntil(
+        caches.open(CACHE).then(cache => cache.addAll(['/']))
+      );
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(
+        caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
+          return caches.open(CACHE).then(cache => {
+            cache.put(e.request, resp.clone());
+            return resp;
+          });
+        }))
+      );
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  const swUrl = URL.createObjectURL(blob);
+  navigator.serviceWorker.register(swUrl).catch(() => {});
+}
+
 // Mantém tela ativa no Safari iOS via vídeo silencioso
 (function() {
   const video = document.createElement('video');
