@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Marcador Dominó">
+<meta name="theme-color" content="#0a0a0f">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Marcador Dominó</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface2: #1a1a26;
+  --azul: #3b82f6;
+  --azul-glow: rgba(59,130,246,0.35);
+  --vermelho: #ef4444;
+  --verm-glow: rgba(239,68,68,0.35);
+  --ouro: #f59e0b;
+  --texto: #e8e8f0;
+  --muted: #6b6b80;
+  --radius: 20px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--texto);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+  -webkit-text-size-adjust: 100%;
+}
+
+button {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.5;
+}
+
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none; z-index: 0;
+}
+
+header {
+  position: relative; z-index: 10;
+  text-align: center;
+  padding: 20px 16px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+}
+
+.header-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(28px, 8vw, 42px);
+  letter-spacing: 6px;
+  background: linear-gradient(135deg, #fff 30%, var(--muted));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.domino-icon {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.tile {
+  width: 22px; height: 38px;
+  background: var(--surface2);
+  border-radius: 4px;
+  border: 1.5px solid rgba(255,255,255,0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  padding: 4px 3px;
+  gap: 2px;
+}
+
+.pip-row { display: flex; gap: 3px; }
+.pip { width: 4px; height: 4px; border-radius: 50%; background: white; }
+
+/* Botão de Ajuda */
+.btn-ajuda {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  background: var(--surface2);
+  color: var(--muted);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 20;
+}
+
+.btn-ajuda:hover, .btn-ajuda:active {
+  border-color: var(--ouro);
+  color: var(--ouro);
+  background: rgba(245,158,11,0.1);
+}
+
+/* Modal do Tutorial */
+.modal-tutorial {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  z-index: 300;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.modal-tutorial-content {
+  background: var(--surface);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 20px;
+  max-width: 400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-tutorial-header {
+  padding: 20px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  border-radius: 20px 20px 0 0;
+  z-index: 10;
+}
+
+.modal-tutorial-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px;
+  letter-spacing: 2px;
+  color: white;
+}
+
+.btn-fechar-tutorial {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-fechar-tutorial:hover {
+  border-color: var(--vermelho);
+  color: var(--vermelho);
+}
+
+.modal-tutorial-body {
+  padding: 20px;
+}
+
+.tutorial-section {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: var(--surface2);
+  border-radius: 12px;
+  border-left: 3px solid var(--ouro);
+}
+
+.tutorial-section.destaque {
+  background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(245,158,11,0.05));
+  border: 2px solid var(--ouro);
+  border-left: 3px solid var(--ouro);
+}
+
+.tutorial-section h3 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--ouro);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tutorial-section.destaque h3 {
+  color: var(--ouro);
+  font-size: 18px;
+}
+
+.tutorial-section p, .tutorial-section li {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--texto);
+}
+
+.tutorial-section ul {
+  margin-left: 16px;
+  margin-top: 8px;
+}
+
+.tutorial-section li {
+  margin-bottom: 4px;
+}
+
+.tutorial-dica {
+  margin-top: 20px;
+  padding: 12px;
+  background: rgba(245,158,11,0.1);
+  border: 1px solid var(--ouro);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ouro);
+  font-style: italic;
+}
+
+.meta-wrap {
+  position: relative; z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 8px auto 16px;
+}
+
+.meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.meta-input {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 26px;
+  letter-spacing: 2px;
+  width: 90px;
+  text-align: center;
+  background: var(--surface2);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  color: var(--ouro);
+  padding: 4px 8px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.meta-input:focus { border-color: var(--ouro); }
+
+.progress-wrap {
+  position: relative; z-index: 10;
+  margin: 0 12px 18px;
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 99px;
+  overflow: visible;
+  display: flex;
+  gap: 2px;
+}
+
+.progress-a, .progress-b {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+}
+
+.progress-a { background: linear-gradient(90deg, #1d4ed8, var(--azul)); }
+.progress-b { background: linear-gradient(90deg, #b91c1c, var(--vermelho)); }
+
+.container {
+  position: relative; z-index: 10;
+  display: flex;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.time {
+  flex: 1;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 18px 12px 16px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.time::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  transition: opacity 0.3s;
+}
+
+.timeA::before { background: linear-gradient(90deg, #1d4ed8, var(--azul), #60a5fa); }
+.timeB::before { background: linear-gradient(90deg, #b91c1c, var(--vermelho), #f87171); }
+
+.time::after {
+  content: '';
+  position: absolute;
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  top: -40px;
+  opacity: 0.12;
+  filter: blur(40px);
+  pointer-events: none;
+  transition: opacity 0.4s;
+}
+
+.timeA::after { background: var(--azul); left: -20px; }
+.timeB::after { background: var(--vermelho); right: -20px; }
+
+.time.lider::after { opacity: 0.3; }
+.time.lider {
+  transform: translateY(-3px);
+  box-shadow: 0 0 24px rgba(34,197,94,0.5), 0 0 48px rgba(34,197,94,0.25);
+  border-color: rgba(34,197,94,0.4);
+  animation: pulsoVerde 1.6s ease-in-out infinite;
+}
+
+@keyframes pulsoVerde {
+  0%,100% { box-shadow: 0 0 18px rgba(34,197,94,0.4), 0 0 40px rgba(34,197,94,0.2); }
+  50%      { box-shadow: 0 0 36px rgba(34,197,94,0.75), 0 0 70px rgba(34,197,94,0.4); }
+}
+
+.time.lider::before {
+  background: linear-gradient(90deg, #15803d, #22c55e, #86efac) !important;
+}
+
+.flag {
+  font-size: 20px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.nome {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(18px, 5vw, 22px);
+  letter-spacing: 3px;
+  border: none;
+  background: transparent;
+  color: white;
+  text-align: center;
+  width: 100%;
+  outline: none;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 2px;
+  transition: border-color 0.2s;
+}
+
+.nome:focus { border-bottom-color: rgba(255,255,255,0.2); }
+
+.pontos-wrap {
+  position: relative;
+  margin: 10px 0 8px;
+}
+
+.pontos {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(72px, 20vw, 100px);
+  line-height: 1;
+  letter-spacing: -2px;
+  transition: transform 0.15s ease, color 0.3s;
+  display: block;
+}
+
+.timeA .pontos { color: #93c5fd; }
+.timeB .pontos { color: #fca5a5; }
+
+.pontos.bump {
+  animation: bump 0.25s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes bump {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); }
+  70%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.time.venceu .pontos {
+  background: linear-gradient(135deg, var(--ouro), #fde68a, var(--ouro));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  to { background-position: 200% center; }
+}
+
+/* Historico */
+.historico-wrap {
+  margin: 0 0 12px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 7px 8px 6px;
+  min-height: 34px;
+  position: relative;
+  z-index: 1;
+}
+
+.historico-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 5px;
+  text-align: left;
+}
+
+.historico-lista {
+  display: flex;
+  gap: 5px;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  min-height: 22px;
+}
+
+.hist-item {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  white-space: nowrap;
+  opacity: 1;
+  animation: fadeSlide 0.3s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+
+@keyframes fadeSlide {
+  from { transform: translateY(-8px) scale(0.8); opacity: 0; }
+  to   { transform: translateY(0) scale(1);     opacity: 1; }
+}
+
+.hist-item:nth-child(1) { opacity: 1; }
+.hist-item:nth-child(2) { opacity: 0.75; }
+.hist-item:nth-child(3) { opacity: 0.55; }
+.hist-item:nth-child(4) { opacity: 0.38; }
+.hist-item:nth-child(5) { opacity: 0.22; }
+
+.timeA .hist-item.pos { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+.timeA .hist-item.neg { background: rgba(239,68,68,0.18);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.25); }
+.timeB .hist-item.pos { background: rgba(239,68,68,0.22);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+.timeB .hist-item.neg { background: rgba(59,130,246,0.18); color: #93c5fd; border: 1px solid rgba(59,130,246,0.25); }
+
+.botoes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.btn {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 1px;
+  padding: 12px 6px;
+  border-radius: 12px;
+  border: none;
+  color: white;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.12s, box-shadow 0.2s;
+}
+
+.btn::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0);
+  transition: background 0.15s;
+  border-radius: inherit;
+}
+
+.btn:active { transform: scale(0.90); }
+.btn:active::after { background: rgba(255,255,255,0.15); }
+
+.btn5   { background: linear-gradient(135deg, #15803d, #22c55e); }
+.btn10  { background: linear-gradient(135deg, #0e7490, #06b6d4); }
+.btn20  { background: linear-gradient(135deg, #7e22ce, #a855f7); }
+.btn25  { background: linear-gradient(135deg, #b45309, #f59e0b); }
+.btnNeg { background: linear-gradient(135deg, #c2410c, #f97316); padding: 10px; font-size: 18px; }
+
+.vitorias-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.vitorias-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  flex: 1;
+  text-align: left;
+}
+
+.vitorias-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--ouro);
+  min-width: 28px;
+  text-align: center;
+}
+
+.btn-v {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  width: 38px; height: 30px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform 0.12s;
+}
+
+.btn-v:active { transform: scale(0.88); }
+.btn-v-plus  { background: #16a34a; }
+.btn-v-minus { background: #6b7280; }
+
+.bottom {
+  position: relative; z-index: 10;
+  text-align: center;
+  margin: 18px 0 24px;
+}
+
+.btn-reset {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 9px 22px;
+  border-radius: 99px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-reset:hover {
+  color: white;
+  border-color: rgba(255,255,255,0.35);
+  background: rgba(255,255,255,0.05);
+}
+
+.toast {
+  position: fixed;
+  bottom: 30px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--ouro);
+  color: #000;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 2px;
+  padding: 12px 28px;
+  border-radius: 99px;
+  z-index: 100;
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Scrollbar do tutorial */
+.modal-tutorial-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modal-tutorial-content::-webkit-scrollbar-track {
+  background: var(--surface2);
+}
+
+.modal-tutorial-content::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 3px;
+}
+
+@media (max-width: 380px) {
+  .btn-ajuda {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    right: 10px;
+  }
+  
+  .header-title {
+    font-size: 24px;
+    letter-spacing: 3px;
+  }
+}
+</style>
+
+</head>
+<body>
+
+<header>
+  <div style="display:flex; flex-direction:column; align-items:center;">
+    <div class="domino-icon">
+      <div class="tile">
+        <div class="pip-row"><div class="pip"></div><div class="pip"></div></div>
+        <div style="width:100%;height:1px;background:rgba(255,255,255,0.2)"></div>
+        <div class="pip-row"><div class="pip"></div><div class="pip"></div></div>
+      </div>
+      <div class="tile">
+        <div class="pip-row"><div class="pip"></div></div>
+        <div style="width:100%;height:1px;background:rgba(255,255,255,0.2)"></div>
+        <div class="pip-row"><div class="pip"></div><div class="pip"></div></div>
+      </div>
+    </div>
+    <div class="header-title">Marcador Dominó</div>
+  </div>
+  <button class="btn-ajuda" onclick="abrirTutorial()" title="Ajuda">?</button>
+</header>
+
+<!-- Modal do Tutorial -->
+<div id="modalTutorial" class="modal-tutorial" onclick="fecharTutorialOutside(event)">
+  <div class="modal-tutorial-content" onclick="event.stopPropagation()">
+    <div class="modal-tutorial-header">
+      <div class="modal-tutorial-title">❓ COMO USAR</div>
+      <button class="btn-fechar-tutorial" onclick="fecharTutorial()">✕</button>
+    </div>
+    <div class="modal-tutorial-body">
+      
+      <div class="tutorial-section destaque">
+        <h3>⭐ SOMA AUTOMÁTICA</h3>
+        <p><strong>Pressione várias teclas SEGUIDAS e elas SOMAM automaticamente!</strong></p>
+        <p style="margin-top:8px; color:var(--ouro);">Ex: +10 → +5 → +5 = <strong>+20</strong> (anunciado de uma vez)</p>
+        <p style="margin-top:8px; font-size:12px; color:var(--muted);">O sistema aguarda 600ms após o último toque para confirmar o total.</p>
+      </div>
+
+      <div class="tutorial-section">
+        <h3>🎯 1. Meta e Progresso</h3>
+        <ul>
+          <li>Defina a meta de pontos (padrão: 200)</li>
+          <li>Barra mostra progresso das duas equipes</li>
+        </ul>
+      </div>
+
+      <div class="tutorial-section">
+        <h3>👥 2. Área das Equipes</h3>
+        <ul>
+          <li>Toque no nome para editar</li>
+          <li>Líder ganha destaque verde pulsante</li>
+          <li>Equipe A (azul) vs Equipe B (vermelho)</li>
+        </ul>
+      </div>
+
+      <div class="tutorial-section">
+        <h3>🔘 3. Botões de Pontuação</h3>
+        <ul>
+          <li><strong>+5, +10, +15, +20</strong> — adicionar pontos</li>
+          <li><strong>-5, -10</strong> — subtrair pontos</li>
+          <li>Toque rapidamente em sequência para somar!</li>
+          <li>Animação visual ao marcar</li>
+        </ul>
+      </div>
+
+      <div class="tutorial-section">
+        <h3>📜 4. Histórico de Lances</h3>
+        <ul>
+          <li>Mostra os últimos 5 lances</li>
+          <li>Exibe o <strong>TOTAL somado</strong> (ex: +30)</li>
+          <li>Fade gradual nos registros antigos</li>
+        </ul>
+      </div>
+
+      <div class="tutorial-section">
+        <h3>🏆 5. Contador de Vitórias</h3>
+        <ul>
+          <li><strong>[-]</strong> e <strong>[+]</strong> para ajuste manual</li>
+          <li>Automático: equipe com 200+ pts ao resetar ganha +1 vitória</li>
+          <li>Voz anuncia placar ao iniciar nova partida</li>
+        </ul>
+      </div>
+
+      <div class="tutorial-section">
+        <h3>🔄 6. Reset e Voz</h3>
+        <ul>
+          <li><strong>↺ Resetar Placar</strong>: Zera pontos e histórico</li>
+          <li><strong>↺ Resetar Vitórias</strong>: Zera contador geral</li>
+          <li>Voz anuncia pontos, vencedor e status</li>
+        </ul>
+      </div>
+
+      <div class="tutorial-dica">
+        💡 DICA: O app funciona offline como PWA!<br>
+        Adicione à tela inicial para usar como app nativo.
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="meta-wrap">
+  <span class="meta-label">Meta</span>
+  <input class="meta-input" type="number" id="meta" value="200">
+</div>
+
+<div class="progress-wrap" id="progressWrap">
+  <div class="progress-a" id="progA" style="width:0%"></div>
+  <div class="progress-b" id="progB" style="width:0%"></div>
+</div>
+
+<div class="container">
+  <!-- EQUIPE A -->
+  <div class="time timeA" id="timeA">
+    <input class="nome" value="Equipe A" id="nomeA">
+    <div class="pontos-wrap">
+      <span class="pontos" id="pA">0</span>
+    </div>
+
+<!-- Historico A -->
+<div class="historico-wrap">
+  <div class="historico-label">Últimos lances</div>
+  <div class="historico-lista" id="histA"></div>
+</div>
+
+<div class="vitorias-wrap">
+  <span class="vitorias-label">Vitórias</span>
+  <button class="btn-v btn-v-minus" onclick="addVit('A',-1)">−</button>
+  <span class="vitorias-num" id="vA">0</span>
+  <button class="btn-v btn-v-plus"  onclick="addVit('A',1)">+</button>
+</div>
+<div class="botoes">
+  <button class="btn btn5"   onclick="add('A',5)">+5</button>
+  <button class="btn btn10"  onclick="add('A',10)">+10</button>
+  <button class="btn btn25"  onclick="add('A',15)">+15</button>
+  <button class="btn btn20"  onclick="add('A',20)">+20</button>
+  <button class="btn btnNeg" onclick="add('A',-5)">−5</button>
+  <button class="btn btnNeg" onclick="add('A',-10)">−10</button>
+</div>
+
+  </div>
+
+  <!-- EQUIPE B -->
+
+  <div class="time timeB" id="timeB">
+    <input class="nome" value="Equipe B" id="nomeB">
+    <div class="pontos-wrap">
+      <span class="pontos" id="pB">0</span>
+    </div>
+
+<!-- Historico B -->
+<div class="historico-wrap">
+  <div class="historico-label">Últimos lances</div>
+  <div class="historico-lista" id="histB"></div>
+</div>
+
+<div class="vitorias-wrap">
+  <span class="vitorias-label">Vitórias</span>
+  <button class="btn-v btn-v-minus" onclick="addVit('B',-1)">−</button>
+  <span class="vitorias-num" id="vB">0</span>
+  <button class="btn-v btn-v-plus"  onclick="addVit('B',1)">+</button>
+</div>
+<div class="botoes">
+  <button class="btn btn5"   onclick="add('B',5)">+5</button>
+  <button class="btn btn10"  onclick="add('B',10)">+10</button>
+  <button class="btn btn25"  onclick="add('B',15)">+15</button>
+  <button class="btn btn20"  onclick="add('B',20)">+20</button>
+  <button class="btn btnNeg" onclick="add('B',-5)">−5</button>
+  <button class="btn btnNeg" onclick="add('B',-10)">−10</button>
+</div>
+
+  </div>
+</div>
+
+<div class="bottom">
+  <button class="btn-reset" onclick="resetar()">↺ Resetar Placar</button>
+  <button class="btn-reset" onclick="resetarVitorias()" style="margin-left:8px;">↺ Resetar Vitórias</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal reset placar -->
+
+<div id="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center;">
+  <div style="background:#1a1a26; border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:28px 24px; text-align:center; max-width:280px; width:90%;">
+    <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; margin-bottom:8px;">Resetar jogo?</div>
+    <div style="font-size:13px; color:#6b6b80; margin-bottom:22px;">O placar e o histórico serão zerados.</div>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button onclick="cancelarReset()" style="flex:1; font-family:'DM Sans',sans-serif; font-weight:700; font-size:14px; padding:11px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#e8e8f0; cursor:pointer;">Cancelar</button>
+      <button onclick="confirmarReset()" style="flex:1; font-family:'DM Sans',sans-serif; font-weight:700; font-size:14px; padding:11px; border-radius:10px; border:none; background:#facc15; color:#000; cursor:pointer;">Resetar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal reset vitórias -->
+
+<div id="modalVitorias" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:200; align-items:center; justify-content:center;">
+  <div style="background:#1a1a26; border:1px solid rgba(255,255,255,0.12); border-radius:20px; padding:28px 24px; text-align:center; max-width:280px; width:90%;">
+    <div style="font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; margin-bottom:8px;">Resetar vitórias?</div>
+    <div style="font-size:13px; color:#6b6b80; margin-bottom:22px;">O contador de vitórias será zerado.</div>
+    <div style="display:flex; gap:10px; justify-content:center;">
+      <button onclick="cancelarResetVitorias()" style="flex:1; font-family:'DM Sans',sans-serif; font-weight:700; font-size:14px; padding:11px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#e8e8f0; cursor:pointer;">Cancelar</button>
+      <button onclick="confirmarResetVitorias()" style="flex:1; font-family:'DM Sans',sans-serif; font-weight:700; font-size:14px; padding:11px; border-radius:10px; border:none; background:#facc15; color:#000; cursor:pointer;">Resetar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let pontos   = { A: 0, B: 0 };
+let vitorias = { A: 0, B: 0 };
+let historico = { A: [], B: [] };
+
+let pendingSpeech  = { A: 0, B: 0 };
+let speechTimeout  = { A: null, B: null };
+
+/* Tutorial */
+function abrirTutorial() {
+  document.getElementById('modalTutorial').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharTutorial() {
+  document.getElementById('modalTutorial').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function fecharTutorialOutside(event) {
+  if (event.target === document.getElementById('modalTutorial')) {
+    fecharTutorial();
+  }
+}
+
+/* Historico */
+function pushHistorico(time) {
+  historico[time].unshift(pontos[time]);
+  if (historico[time].length > 5) historico[time].pop();
+  renderHistorico(time);
+}
+
+function renderHistorico(time) {
+  const container = document.getElementById('hist' + time);
+  container.innerHTML = '';
+  historico[time].forEach((v) => {
+    const span = document.createElement('span');
+    span.className = 'hist-item ' + (v >= 0 ? 'pos' : 'neg');
+    span.textContent = (v > 0 ? '+' : '') + v;
+    container.appendChild(span);
+  });
+}
+
+function limparHistorico() {
+  historico = { A: [], B: [] };
+  renderHistorico('A');
+  renderHistorico('B');
+}
+
+/* Vitórias */
+function addVit(time, val) {
+  vitorias[time] = Math.max(0, vitorias[time] + val);
+  document.getElementById('v' + time).textContent = vitorias[time];
+  falarVitória(time, vitorias[time]);
+}
+
+function falarVitória(time, total) {
+  try {
+    if (!window.speechSynthesis) return;
+    const nome = document.getElementById('nome' + time).value || 'Equipe ' + time;
+    const texto = nome + ', ' + total + ' vitória' + (total !== 1 ? 's' : '');
+    window.speechSynthesis.cancel();
+    const fala = new SpeechSynthesisUtterance(texto);
+    fala.lang = 'pt-BR';
+    fala.rate = 1.1;
+    window.speechSynthesis.speak(fala);
+  } catch(e) {}
+}
+
+function resetarVitorias() {
+  document.getElementById('modalVitorias').style.display = 'flex';
+}
+function confirmarResetVitorias() {
+  document.getElementById('modalVitorias').style.display = 'none';
+  falarVencedor();
+  vitorias = { A: 0, B: 0 };
+  document.getElementById('vA').textContent = 0;
+  document.getElementById('vB').textContent = 0;
+}
+function cancelarResetVitorias() {
+  document.getElementById('modalVitorias').style.display = 'none';
+}
+
+/* Speech */
+function falar(valor, time) {
+  try {
+    if (!window.speechSynthesis) return;
+    pendingSpeech[time] += valor;
+    if (speechTimeout[time]) clearTimeout(speechTimeout[time]);
+    speechTimeout[time] = setTimeout(() => {
+      const total = pendingSpeech[time];
+      pendingSpeech[time] = 0;
+      if (total === 0) return;
+      const nome = document.getElementById('nome' + time).value || 'Equipe ' + time;
+      const texto = total > 0
+        ? nome + ', mais ' + total
+        : nome + ', menos ' + Math.abs(total);
+      window.speechSynthesis.cancel();
+      const fala = new SpeechSynthesisUtterance(texto);
+      fala.lang = 'pt-BR'; fala.rate = 1.1;
+      window.speechSynthesis.speak(fala);
+    }, 600);
+  } catch(e) {}
+}
+
+/* Toast */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+/* Bump */
+function bumpEl(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+
+/* Atualizar */
+function atualizar() {
+  const meta = parseInt(document.getElementById('meta').value) || 200;
+  document.getElementById('pA').textContent = pontos.A;
+  document.getElementById('pB').textContent = pontos.B;
+
+  const timeA = document.getElementById('timeA');
+  const timeB = document.getElementById('timeB');
+
+  timeA.classList.remove('lider', 'venceu');
+  timeB.classList.remove('lider', 'venceu');
+
+  if (pontos.A > pontos.B)      timeA.classList.add('lider');
+  else if (pontos.B > pontos.A) timeB.classList.add('lider');
+
+  const progA = document.getElementById('progA');
+  const progB = document.getElementById('progB');
+  const total = pontos.A + pontos.B;
+  if (total > 0) {
+    progA.style.width = (pontos.A / (meta * 2) * 100).toFixed(1) + '%';
+    progB.style.width = (pontos.B / (meta * 2) * 100).toFixed(1) + '%';
+  } else {
+    progA.style.width = '0%';
+    progB.style.width = '0%';
+  }
+
+  const nomeA = document.getElementById('nomeA').value || 'Equipe A';
+  const nomeB = document.getElementById('nomeB').value || 'Equipe B';
+
+  if (pontos.A >= meta) { timeA.classList.add('lider'); showToast('🏆 ' + nomeA + ' vencendo!'); }
+  if (pontos.B >= meta) { timeB.classList.add('lider'); showToast('🏆 ' + nomeB + ' vencendo!'); }
+}
+
+/* Voz Reset */
+function falarPartidaIniciada() {
+  try {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const fala = new SpeechSynthesisUtterance('Partida iniciada');
+    fala.lang = 'pt-BR';
+    fala.rate = 1.1;
+    window.speechSynthesis.speak(fala);
+  } catch(e) {}
+}
+
+function falarPlacarVitorias() {
+  try {
+    if (!window.speechSynthesis) return;
+    const vA = vitorias.A;
+    const vB = vitorias.B;
+    const nomeA = document.getElementById('nomeA').value || 'Equipe A';
+    const nomeB = document.getElementById('nomeB').value || 'Equipe B';
+    let texto = '';
+    if (vA === 0 && vB === 0) {
+      texto = 'Placar de vitórias zerado';
+    } else if (vA === vB) {
+      texto = 'Placar de vitórias. Houve um empate. ' + vA + ' a ' + vB;
+    } else if (vA > vB) {
+      texto = 'Placar de vitórias. ' + nomeA + ' ' + vA + ', ' + nomeB + ' ' + vB;
+    } else {
+      texto = 'Placar de vitórias. ' + nomeB + ' ' + vB + ', ' + nomeA + ' ' + vA;
+    }
+    window.speechSynthesis.cancel();
+    const fala = new SpeechSynthesisUtterance(texto);
+    fala.lang = 'pt-BR';
+    fala.rate = 1.05;
+    window.speechSynthesis.speak(fala);
+  } catch(e) {}
+}
+
+function falarVencedor() {
+  try {
+    if (!window.speechSynthesis) return;
+    const vA = vitorias.A;
+    const vB = vitorias.B;
+    const nomeA = document.getElementById('nomeA').value || 'Equipe A';
+    const nomeB = document.getElementById('nomeB').value || 'Equipe B';
+    let texto = '';
+    if (vA === 0 && vB === 0) {
+      texto = 'Nenhuma vitória registrada';
+    } else if (vA === vB) {
+      texto = 'Houve um empate';
+    } else if (vA > vB) {
+      texto = nomeA + ' venceu';
+    } else {
+      texto = nomeB + ' venceu';
+    }
+    window.speechSynthesis.cancel();
+    const fala = new SpeechSynthesisUtterance(texto);
+    fala.lang = 'pt-BR';
+    fala.rate = 1.05;
+    window.speechSynthesis.speak(fala);
+  } catch(e) {}
+}
+
+/* Reset */
+function resetar() {
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function confirmarReset() {
+  document.getElementById('modal').style.display = 'none';
+  const meta = parseInt(document.getElementById('meta').value) || 200;
+  if (pontos.A >= meta || pontos.B >= meta) {
+    if (pontos.A > pontos.B)      addVit('A', 1);
+    else if (pontos.B > pontos.A) addVit('B', 1);
+  }
+  pontos = { A: 0, B: 0 };
+  limparHistorico();
+  document.getElementById('timeA').classList.remove('venceu', 'lider');
+  document.getElementById('timeB').classList.remove('venceu', 'lider');
+  atualizar();
+  falarPartidaIniciada();
+  setTimeout(() => falarPlacarVitorias(), 1200);
+}
+
+function cancelarReset() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+/* Add */
+let pendingHist = { A: 0, B: 0 };
+let histTimeout = { A: null, B: null };
+
+function add(time, valor) {
+  if (valor < 0 && pontos[time] + valor < 0) {
+    showToast('⚠️ Saldo insuficiente!');
+    try {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const fala = new SpeechSynthesisUtterance('Saldo insuficiente');
+        fala.lang = 'pt-BR'; fala.rate = 1.1;
+        window.speechSynthesis.speak(fala);
+      }
+    } catch(e) {}
+    return;
+  }
+  pontos[time] = Math.max(0, pontos[time] + valor);
+  pendingHist[time] += valor;
+
+  if (histTimeout[time]) clearTimeout(histTimeout[time]);
+  histTimeout[time] = setTimeout(() => {
+    const total = pendingHist[time];
+    pendingHist[time] = 0;
+    historico[time].unshift(total);
+    if (historico[time].length > 5) historico[time].pop();
+    renderHistorico(time);
+  }, 600);
+
+  bumpEl('p' + time);
+  falar(valor, time);
+  atualizar();
+}
+
+atualizar();
+
+// Service Worker PWA
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+
+// Mantém tela ativa no Safari iOS via vídeo silencioso
+(function() {
+  const video = document.createElement('video');
+  video.setAttribute('playsinline', '');
+  video.setAttribute('muted', '');
+  video.setAttribute('loop', '');
+  video.style.display = 'none';
+  video.src = 'data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28ybXA0MQAAAAhmcmVlAAAC721kYXQAAAKuBgX//6rcRem95tlIt5Ys2CDZI+7veDI2NCAtIGNvcmUgMTUyIHIyODU0IGU5YTU5MDMgLSBILjI2NC9NUEVHLTQgQVZDIGNvZGVjIC0gQ29weWxlZnQgMjAwMy0yMDE3IC0gaHR0cDovL3d3dy52aWRlb2xhbi5vcmcveDI2NC5odG1sIC0gb3B0aW9uczogY2FiYWM9MSByZWY9MyBkZWJsb2NrPTE6MDowIGFuYWx5c2U9MHgzOjB4MTEzIG1lPWhleCBzdWJtZT03IHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MTYgY2hyb21hX21lPTEgdHJlbGxpcz0xIDh4OGRjdD0xIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9NjEgbG9va2FoZWFkX3RocmVhZHM9MTAgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiByZW9yZGVyPTEgZHVwbGljYXRlX2NudF9wYXNzPTEgZGlyZWN0PTEgd2VpZ2h0Yj0xIG9wZW5fZ29wPTAgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj0yNSBzY2VuZWN1dD00MCBpbnRyYV9yZWZyZXNoPTAgcmNfbG9va2FoZWFkPTQwIHJjPWNyZiBtYnRyZWU9MSBjcmY9MjMuMCBxY29tcD0wLjYwIHFwbWluPTAgcXBtYXg9NjkgcXBzdGVwPTQgaXBfcmF0aW89MS40MCBhcT0xOjEuMDAAgAAAAEZliIQAF//+7gA3bRt2ACRRzGorWEAAAAMAAAMAAAMAAANgRMIhNiNXkLYOhAAAAwAAHAOoqMfMAAAAwACGKk+A4AAAAwAAAwCOgAAABBliIQAF//+8mwB2b24AJFHMai';
+  document.body.appendChild(video);
+  video.play().catch(() => {});
+})();
+</script>
+
+</body>
+</html>
